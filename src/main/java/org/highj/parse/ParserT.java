@@ -1,7 +1,6 @@
 package org.highj.parse;
 
 import org.derive4j.hkt.__;
-import org.highj.data.List;
 import org.highj.typeclass0.group.Monoid;
 import org.highj.typeclass1.monad.Monad;
 
