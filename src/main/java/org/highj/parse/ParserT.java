@@ -1,6 +1,7 @@
 package org.highj.parse;
 
 import org.derive4j.hkt.__;
+import org.highj.data.List;
 import org.highj.typeclass0.group.Monoid;
 import org.highj.typeclass1.monad.Monad;
 
@@ -73,6 +74,7 @@ public interface ParserT<E,TC,M,A> {
             }
         }
         final Lazy lazy = new Lazy();
+        lazy.expression = p;
         return (Monoid<E> eMonoid, Monoid<TC> tcMonoid, Monad<M> mMonad, TC tokenChunk) ->
             lazy.eval().consume(eMonoid, tcMonoid, mMonad, tokenChunk);
     }
@@ -124,5 +126,13 @@ public interface ParserT<E,TC,M,A> {
                 ParserT.this.consume(eMonoid, tcMonoid, mMonad, tokenChunk),
                 rhs.consume(eMonoid, tcMonoid, mMonad, tokenChunk)
             );
+    }
+
+    static <E,TC,M,A> ParserT<E,TC,M,List<A>> many(ParserT<E,TC,M,A> p) {
+        return some(p).mplus(ParserT.pure(List.Nil()));
+    }
+
+    static <E,TC,M,A> ParserT<E,TC,M,List<A>> some(ParserT<E,TC,M,A> p) {
+        return ParserT.lazy(() -> many(p)).apply(p.map((A a) -> (List<A> x) -> List.Cons(a, x)));
     }
 }
