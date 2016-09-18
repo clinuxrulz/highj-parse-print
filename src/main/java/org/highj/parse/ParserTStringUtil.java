@@ -1,7 +1,14 @@
 package org.highj.parse;
 
+import org.highj.data.Either;
+import org.highj.data.List;
+import org.highj.data.stateful.Effect0;
+import org.highj.data.tuple.T0;
+import org.highj.data.tuple.T1;
 import org.highj.typeclass0.group.Monoid;
 import org.highj.typeclass1.monad.Monad;
+
+import java.util.function.Function;
 
 public class ParserTStringUtil {
 
@@ -37,5 +44,39 @@ public class ParserTStringUtil {
                 return mMonad.pure(ParserTResult.<E,String,M,String>error(noMatchError));
             }
         };
+    }
+
+    public static <E,M> ParserT<E,String,M,Integer> digit(E noMatchError) {
+        return (Monoid<E> eMonoid, Monoid<String> tcMonoid, Monad<M> mMonad, String tokenChunk) -> {
+            if (tokenChunk.isEmpty()) {
+                return mMonad.pure(ParserTResult.<E,String,M,Integer>more(digit(noMatchError)));
+            } else {
+                char c = tokenChunk.charAt(0);
+                String remainingTokenChunk = tokenChunk.substring(1);
+                if (Character.isDigit(c)) {
+                    return mMonad.pure(ParserTResult.<E,String,M,Integer>done(Character.digit(c, 10), remainingTokenChunk));
+                } else {
+                    return mMonad.pure(ParserTResult.<E,String,M,Integer>error(noMatchError));
+                }
+            }
+        };
+    }
+
+    public static <E,M> ParserT<E,String,M,Integer> int_(E noMatchError) {
+        return ParserT.some(ParserTStringUtil.<E,M>digit(noMatchError)).map(
+            (List<Integer> digits) -> {
+                List<Integer> digits2 = digits.reverse();
+                int total = 0;
+                for (Integer digit : digits2) {
+                    total *= 10;
+                    total += digit;
+                }
+                return total;
+            }
+        );
+    }
+
+    public static <E,M> ParserT<E,String,M,T0> eof(E noMatchError) {
+        return ParserTStringUtil.<E,M>char_((char)0, noMatchError).map(unused -> T0.of());
     }
 }

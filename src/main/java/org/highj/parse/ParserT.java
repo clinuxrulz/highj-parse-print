@@ -129,10 +129,10 @@ public interface ParserT<E,TC,M,A> {
     }
 
     static <E,TC,M,A> ParserT<E,TC,M,List<A>> many(ParserT<E,TC,M,A> p) {
-        return some(p).mplus(ParserT.pure(List.Nil()));
+        return ParserTUtil.manyReversed(p).map(List::reverse);
     }
 
     static <E,TC,M,A> ParserT<E,TC,M,List<A>> some(ParserT<E,TC,M,A> p) {
-        return ParserT.lazy(() -> many(p)).apply(p.map((A a) -> (List<A> x) -> List.Cons(a, x)));
+        return ParserTUtil.someReversed(p).map(List::reverse);
     }
 }
