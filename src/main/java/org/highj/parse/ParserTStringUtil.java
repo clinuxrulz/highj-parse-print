@@ -1,14 +1,9 @@
 package org.highj.parse;
 
-import org.highj.data.Either;
 import org.highj.data.List;
-import org.highj.data.stateful.Effect0;
 import org.highj.data.tuple.T0;
-import org.highj.data.tuple.T1;
 import org.highj.typeclass0.group.Monoid;
 import org.highj.typeclass1.monad.Monad;
-
-import java.util.function.Function;
 
 public class ParserTStringUtil {
 

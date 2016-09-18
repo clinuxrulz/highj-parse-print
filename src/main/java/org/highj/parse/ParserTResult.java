@@ -4,7 +4,6 @@ import org.derive4j.Data;
 import org.derive4j.Derive;
 import org.derive4j.Flavour;
 import org.derive4j.Visibility;
-import org.highj.data.List;
 
 import java.util.function.Function;
 
