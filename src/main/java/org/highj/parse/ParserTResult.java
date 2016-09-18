@@ -9,34 +9,34 @@ import org.highj.data.List;
 import java.util.function.Function;
 
 @Data(value = @Derive(inClass = "ParserTResultImpl", withVisibility = Visibility.Package), flavour = Flavour.HighJ)
-public abstract class ParserTResult<E,T,M,A> {
+public abstract class ParserTResult<E,TC,M,A> {
 
-    public interface Cases<R,E,T,M,A> {
-        R Done(A result, List<T> unconsumedTokens);
-        R More(ParserT<E,T,M,A> parserT);
+    public interface Cases<R,E,TC,M,A> {
+        R Done(A result, TC unconsumedTokenChunk);
+        R More(ParserT<E,TC,M,A> parserT);
         R Error(E error);
     }
 
-    public abstract <R> R match(Cases<R,E,T,M,A> cases);
+    public abstract <R> R match(Cases<R,E,TC,M,A> cases);
 
-    public static <E,T,M,A> ParserTResult<E,T,M,A> done(A result, List<T> unconsumedTokens) {
+    public static <E,TC,M,A> ParserTResult<E,TC,M,A> done(A result, TC unconsumedTokens) {
         return ParserTResultImpl.Done(result, unconsumedTokens);
     }
 
-    public static <E,T,M,A> ParserTResult<E,T,M,A> more(ParserT<E,T,M,A> parserT) {
+    public static <E,TC,M,A> ParserTResult<E,TC,M,A> more(ParserT<E,TC,M,A> parserT) {
         return ParserTResultImpl.More(parserT);
     }
 
-    public static <E,T,M,A> ParserTResult<E,T,M,A> error(E error) {
+    public static <E,TC,M,A> ParserTResult<E,TC,M,A> error(E error) {
         return ParserTResultImpl.Error(error);
     }
 
-    public <B> ParserTResult<E,T,M,B> map(Function<A,B> fn) {
+    public <B> ParserTResult<E,TC,M,B> map(Function<A,B> fn) {
         return ParserTResultImpl
-            .<E,T,M,A>cases()
-            .Done((A result, List<T> unconsumedTokens) -> ParserTResult.<E,T,M,B>done(fn.apply(result), unconsumedTokens))
-            .More((ParserT<E,T,M,A> k) -> ParserTResult.<E,T,M,B>more(k.map(fn)))
-            .Error(ParserTResult::<E,T,M,B>error)
+            .<E,TC,M,A>cases()
+            .Done((A result, TC unconsumedTokenChunk) -> ParserTResult.<E,TC,M,B>done(fn.apply(result), unconsumedTokenChunk))
+            .More((ParserT<E,TC,M,A> k) -> ParserTResult.<E,TC,M,B>more(k.map(fn)))
+            .Error(ParserTResult::<E,TC,M,B>error)
             .apply(this);
     }
 }

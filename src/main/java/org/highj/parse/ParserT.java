@@ -8,39 +8,39 @@ import org.highj.typeclass1.monad.Monad;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-public interface ParserT<E,T,M,A> {
+public interface ParserT<E,TC,M,A> {
 
-    __<M,ParserTResult<E,T,M,A>> consume(Monoid<E> eMonoid, Monad<M> mMonad, List<T> tokens);
+    __<M,ParserTResult<E,TC,M,A>> consume(Monoid<E> eMonoid, Monoid<TC> tcMonoid, Monad<M> mMonad, TC tokenChunk);
 
-    static <E,T,M,A> ParserT<E,T,M,A> liftM(__<M,A> ma) {
-        return (Monoid<E> eMonoid, Monad<M> mMonad, List<T> tokens) ->
+    static <E,TC,M,A> ParserT<E,TC,M,A> liftM(__<M,A> ma) {
+        return (Monoid<E> eMonoid, Monoid<TC> tcMonoid, Monad<M> mMonad, TC tokenChunk) ->
             mMonad.map(
                 (A a) ->
-                    ParserTResult.done(a, List.Nil()),
+                    ParserTResult.done(a, tcMonoid.identity()),
                 ma
             );
     }
 
-    default <B> ParserT<E,T,M,B> map(Function<A,B> fn) {
-        return (Monoid<E> eMonoid, Monad<M> mMonad, List<T> tokens) ->
+    default <B> ParserT<E,TC,M,B> map(Function<A,B> fn) {
+        return (Monoid<E> eMonoid, Monoid<TC> tcMonoid, Monad<M> mMonad, TC tokens) ->
             mMonad.map(
-                (ParserTResult<E,T,M,A> x) -> x.map(fn),
-                ParserT.this.consume(eMonoid, mMonad, tokens)
+                (ParserTResult<E,TC,M,A> x) -> x.map(fn),
+                ParserT.this.consume(eMonoid, tcMonoid, mMonad, tokens)
             );
     }
 
-    default <B> ParserT<E,T,M,B> apply(ParserT<E,T,M,Function<A,B>> pf) {
-        return (Monoid<E> eMonoid, Monad<M> mMonad, List<T> tokens) ->
+    default <B> ParserT<E,TC,M,B> apply(ParserT<E,TC,M,Function<A,B>> pf) {
+        return (Monoid<E> eMonoid, Monoid<TC> tcMonoid, Monad<M> mMonad, TC tokenChunk) ->
             mMonad.bind(
-                pf.consume(eMonoid, mMonad, tokens),
+                pf.consume(eMonoid, tcMonoid, mMonad, tokenChunk),
                 ParserTResultImpl
-                    .<E,T,M,Function<A,B>>cases()
+                    .<E,TC,M,Function<A,B>>cases()
                     .Done(
-                        (Function<A,B> fn, List<T> remainingTokens) ->
-                            ParserT.this.map(fn).consume(eMonoid, mMonad, remainingTokens)
+                        (Function<A,B> fn, TC remainingTokenChunk) ->
+                            ParserT.this.map(fn).consume(eMonoid, tcMonoid, mMonad, remainingTokenChunk)
                     )
                     .More(
-                        (ParserT<E,T,M,Function<A,B>> pf2) ->
+                        (ParserT<E,TC,M,Function<A,B>> pf2) ->
                             mMonad.pure(ParserTResult.more(ParserT.this.apply(pf2)))
                     )
                     .Error(
@@ -49,18 +49,18 @@ public interface ParserT<E,T,M,A> {
             );
     }
 
-    static <E,T,M,A> ParserT<E,T,M,A> pure(A a) {
-        return (Monoid<E> eMonoid, Monad<M> mMonad, List<T> tokens) ->
-            mMonad.pure(ParserTResult.done(a, tokens));
+    static <E,TC,M,A> ParserT<E,TC,M,A> pure(A a) {
+        return (Monoid<E> eMonoid, Monoid<TC> tcMonoid, Monad<M> mMonad, TC tokenChunk) ->
+            mMonad.pure(ParserTResult.done(a, tokenChunk));
     }
 
-    static <E,T,M,A> ParserT<E,T,M,A> lazy(Supplier<ParserT<E,T,M,A>> p) {
+    static <E,TC,M,A> ParserT<E,TC,M,A> lazy(Supplier<ParserT<E,TC,M,A>> p) {
         class Lazy {
             private final Object lock = new Object();
-            private Supplier<ParserT<E,T,M,A>> expression;
-            private volatile ParserT<E,T,M,A> evaluation;
-            private ParserT<E,T,M,A> eval() {
-                ParserT<E,T,M,A> _evaluation = this.evaluation;
+            private Supplier<ParserT<E,TC,M,A>> expression;
+            private volatile ParserT<E,TC,M,A> evaluation;
+            private ParserT<E,TC,M,A> eval() {
+                ParserT<E,TC,M,A> _evaluation = this.evaluation;
                 if (_evaluation == null) {
                     synchronized (this.lock) {
                         _evaluation = this.evaluation;
@@ -74,32 +74,32 @@ public interface ParserT<E,T,M,A> {
             }
         }
         final Lazy lazy = new Lazy();
-        return (Monoid<E> eMonoid, Monad<M> mMonad, List<T> tokens) ->
-            lazy.eval().consume(eMonoid, mMonad, tokens);
+        return (Monoid<E> eMonoid, Monoid<TC> tcMonoid, Monad<M> mMonad, TC tokenChunk) ->
+            lazy.eval().consume(eMonoid, tcMonoid, mMonad, tokenChunk);
     }
 
-    default ParserT<E,T,M,A> mplus(ParserT<E,T,M,A> rhs) {
-        return (Monoid<E> eMonoid, Monad<M> mMonad, List<T> tokens) ->
+    default ParserT<E,TC,M,A> mplus(ParserT<E,TC,M,A> rhs) {
+        return (Monoid<E> eMonoid, Monoid<TC> tcMonoid, Monad<M> mMonad, TC tokenChunk) ->
             mMonad.apply2(
-                (ParserTResult<E,T,M,A> lhsPr) -> (ParserTResult<E,T,M,A> rhsPr) ->
+                (ParserTResult<E,TC,M,A> lhsPr) -> (ParserTResult<E,TC,M,A> rhsPr) ->
                     ParserTResultImpl
-                        .<E,T,M,A>cases()
+                        .<E,TC,M,A>cases()
                         .Done(lhsPr)
                         .More(
-                            (ParserT<E,T,M,A> lhs2) ->
+                            (ParserT<E,TC,M,A> lhs2) ->
                                 ParserTResult.more(
                                     ParserTResultImpl
-                                        .<E,T,M,A>cases()
+                                        .<E,TC,M,A>cases()
                                         .Done(
-                                            (A a, List<T> remainingTokens) ->
+                                            (A a, TC remainingTokenChunk) ->
                                                 lhs2.mplus(
-                                                    (Monoid<E> eMonoid2, Monad<M> mMonad2, List<T> tokens2) ->
+                                                    (Monoid<E> eMonoid2, Monoid<TC> tcMonoid2, Monad<M> mMonad2, TC tokenChunk2) ->
                                                         mMonad2.pure(
-                                                            ParserTResult.<E,T,M,A>done(
+                                                            ParserTResult.<E,TC,M,A>done(
                                                                 a,
-                                                                List.append(
-                                                                    remainingTokens,
-                                                                    tokens2
+                                                                tcMonoid2.apply(
+                                                                    remainingTokenChunk,
+                                                                    tokenChunk2
                                                                 )
                                                             )
                                                         )
@@ -112,18 +112,18 @@ public interface ParserT<E,T,M,A> {
                         )
                         .Error(e ->
                             ParserTResultImpl
-                                .<E,T,M,A>cases()
+                                .<E,TC,M,A>cases()
                                 .Done(rhsPr)
                                 .More(
-                                    (ParserT<E,T,M,A> rhs2) ->
+                                    (ParserT<E,TC,M,A> rhs2) ->
                                         ParserTResult.more(ParserTUtil.addErrorBeforeErrorOnError(rhs2, e))
                                 )
                                 .Error(e2 -> ParserTResult.error(eMonoid.apply(e, e2)))
                                 .apply(rhsPr)
                         )
                         .apply(lhsPr),
-                ParserT.this.consume(eMonoid, mMonad, tokens),
-                rhs.consume(eMonoid, mMonad, tokens)
+                ParserT.this.consume(eMonoid, tcMonoid, mMonad, tokenChunk),
+                rhs.consume(eMonoid, tcMonoid, mMonad, tokenChunk)
             );
     }
 }
